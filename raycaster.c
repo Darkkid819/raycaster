@@ -1,4 +1,5 @@
 #include "raylib.h"
+#include "raymath.h"
 #include <stdlib.h>
 
 #define SCREEN_WIDTH 1024
@@ -6,6 +7,8 @@
 
 typedef struct Player {
     Vector2 position;
+    Vector2 delta;
+    float angle;
     int size;
     Color color;
 } Player;
@@ -48,13 +51,15 @@ int main(void) {
 }
 
 void InitGame(void) {
-    player.position.x = 300;
-    player.position.y = 300;
+    player.position.x = 300.0f;
+    player.position.y = 300.0f;
+    player.angle = 0.0f;
+    player.delta.x = cosf(player.angle) * 5.0f;
+    player.delta.y = sinf(player.angle) * 5.0f;
     player.size = 8;
     player.color = YELLOW;
-
-    world.units.x = 8;
-    world.units.y = 8;
+    world.units.x = 8.0f;
+    world.units.y = 8.0f;
     world.size = 64;
     world.map = (int*) malloc(world.units.x * world.units.y * sizeof(int));
 
@@ -78,13 +83,36 @@ void InitGame(void) {
 }
 
 void UpdateControls(void) {
-    float *px = &player.position.x;
-    float *py = &player.position.y;
+    float* px = &player.position.x;
+    float* py = &player.position.y;
+    float* pdx = &player.delta.x;
+    float* pdy = &player.delta.y;
+    float* pa = &player.angle;
 
-    if (IsKeyDown(KEY_A)) *px-=5;
-    if (IsKeyDown(KEY_D)) *px+=5;
-    if (IsKeyDown(KEY_W)) *py-=5;
-    if (IsKeyDown(KEY_S)) *py+=5;
+    if (IsKeyDown(KEY_A)) {
+        *pa-=0.1;
+        if (*pa < 0) {
+            *pa += 2*PI;
+        }
+        *pdx = cosf(*pa) * 5;
+        *pdy = sinf(*pa) * 5;
+    } 
+    if (IsKeyDown(KEY_D)) {
+        *pa+=0.1;
+        if (*pa > 2 * PI) {
+            *pa -= 2*PI;
+        }
+        *pdx = cosf(*pa) * 5;
+        *pdy = sinf(*pa) * 5;
+    }
+    if (IsKeyDown(KEY_W)) {
+        *px += *pdx;
+        *py += *pdy;
+    }
+    if (IsKeyDown(KEY_S)) {
+        *px -= *pdx;
+        *py -= *pdy;
+    }
 }
 
 void UpdateGame(void) {
@@ -94,9 +122,17 @@ void UpdateGame(void) {
 void DrawPlayer(void) {
     int startX = player.position.x;
     int startY = player.position.y;
-    int size = player.size;
-    Color color = player.color;
-    DrawRectangle(startX, startY, size, size, color);
+    int endX = startX + player.delta.x * 5;
+    int endY = startY + player.delta.y * 5;
+    
+    Vector2 start = { (float)startX, (float)startY };
+    Vector2 end = { (float)endX, (float)endY };
+    float thickness = 3.0f;
+    Color color = YELLOW;
+
+    DrawLineEx(start, end, thickness, color); 
+
+    DrawRectangle(startX - player.size / 2, startY - player.size / 2, player.size, player.size, player.color);
 }
 
 void Draw2DMap(void) {
