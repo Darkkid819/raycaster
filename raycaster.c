@@ -27,6 +27,7 @@ void UpdateControls(void);
 void UpdateGame(void);
 void DrawPlayer(void);
 void Draw2DMap(void);
+void DrawRays3D(void);
 void DrawGame(void);
 void DeInitGame(void);
 
@@ -53,9 +54,9 @@ int main(void) {
 void InitGame(void) {
     player.position.x = 300.0f;
     player.position.y = 300.0f;
-    player.angle = 0.0f;
-    player.delta.x = cosf(player.angle) * 5.0f;
-    player.delta.y = sinf(player.angle) * 5.0f;
+    player.angle = 1.0f;
+    player.delta.x = cos(player.angle) * 5.0f;
+    player.delta.y = sin(player.angle) * 5.0f;
     player.size = 8;
     player.color = YELLOW;
     world.units.x = 8.0f;
@@ -94,16 +95,16 @@ void UpdateControls(void) {
         if (*pa < 0) {
             *pa += 2*PI;
         }
-        *pdx = cosf(*pa) * 5;
-        *pdy = sinf(*pa) * 5;
+        *pdx = cos(*pa) * 5;
+        *pdy = sin(*pa) * 5;
     } 
     if (IsKeyDown(KEY_D)) {
         *pa+=0.1;
         if (*pa > 2 * PI) {
             *pa -= 2*PI;
         }
-        *pdx = cosf(*pa) * 5;
-        *pdy = sinf(*pa) * 5;
+        *pdx = cos(*pa) * 5;
+        *pdy = sin(*pa) * 5;
     }
     if (IsKeyDown(KEY_W)) {
         *px += *pdx;
@@ -151,11 +152,59 @@ void Draw2DMap(void) {
     }
 }
 
+void DrawRays3D(void) {
+    int r, mx, my, mp, dof;
+    float rx, ry, ra, x0, y0;
+    ra = player.angle;
+    float px = player.position.x;
+    float py = player.position.y;
+    int mapX = world.units.x;
+    int mapY = world.units.y;
+
+    for (r = 0; r < 1; r++) {
+        dof = 0;
+        float aTan = -1/tan(ra);
+        if (ra > PI) { // looking up
+            ry = (((int) py >> 6) << 6) - 0.0001f; 
+            rx = (py - ry) * aTan + px;
+            y0 = -64.0f;
+            x0 = -y0 * aTan;
+        }
+        if (ra < PI) { // looking down
+            ry = (((int) py >> 6) << 6) + 64.0f; 
+            rx = (py - ry) * aTan + px;
+            y0 = 64.0f;
+            x0 = -y0 * aTan;
+        }
+        if (ra == 0 || ra == PI) { // straight or left
+            rx = px; 
+            ry = py; 
+            dof = 8;
+        }
+        while (dof < 8) {
+            mx = (int) (rx) >> 6;
+            my = (int) (ry) >> 6;
+            mp = my * mapX + mx;
+            mp = Clamp(mp, 0, 63);
+            if (mp < mapX * mapY && world.map[mp] == 1) { // hit wall
+                dof = 8; 
+            } else {
+                rx += x0;
+                ry += y0;
+                dof += 1;
+            }
+        }
+
+        DrawLineEx((Vector2){px, py}, (Vector2){rx, ry}, 1, GREEN);
+    }
+}
+
 void DrawGame(void) {
     ClearBackground(DARKGRAY);
     DrawFPS(10, 10);
 
     Draw2DMap();
+    DrawRays3D();
     DrawPlayer();
 }
 
