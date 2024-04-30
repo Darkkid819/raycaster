@@ -5,8 +5,7 @@
 #define SCREEN_WIDTH 1024
 #define SCREEN_HEIGHT 512
 
-#define P2 PI/2
-#define P3 PI/3
+#define DR 0.0174533 // 1 degree in radians
 
 typedef struct Player {
     Vector2 position;
@@ -30,7 +29,8 @@ void UpdateControls(void);
 void UpdateGame(void);
 void DrawPlayer(void);
 void Draw2DMap(void);
-void DrawRays3D(void);
+float dist(float, float, float, float, float);
+void DrawRays2D(void);
 void DrawGame(void);
 void DeInitGame(void);
 
@@ -155,20 +155,33 @@ void Draw2DMap(void) {
     }
 }
 
-void DrawRays3D(void) {
+float dist(float ax, float ay, float bx, float by, float ang) {
+    return (sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay)));
+}
+
+void DrawRays2D(void) {
     int r, mx, my, mp, dof;
     float rx, ry, ra, x0, y0;
-    ra = player.angle;
+    ra = player.angle - DR * 30;
+    if (ra < 0) {
+        ra += 2 * PI;
+    }
+    if (ra > 2 * PI) {
+        ra -= 2 * PI;
+    }
     float px = player.position.x;
     float py = player.position.y;
     int mapX = world.units.x;
     int mapY = world.units.y;
 
-    for (r = 0; r < 1; r++) {
+    for (r = 0; r < 60; r++) {
+        dof = 0;
+        float disH = 1000000;
+        float hx = px;
+        float hy = py;
+        float aTan = -1/tan(ra);
 
         // check horizontal lines
-        dof = 0;
-        float aTan = -1/tan(ra);
         if (ra > PI) { // looking up
             ry = (((int) py >> 6) << 6) - 0.0001f; 
             rx = (py - ry) * aTan + px;
@@ -190,7 +203,10 @@ void DrawRays3D(void) {
             mx = (int) (rx) >> 6;
             my = (int) (ry) >> 6;
             mp = my * mapX + mx;
-            if (mp < mapX * mapY && world.map[mp] == 1) { // hit wall
+            if (mp > 0 && mp < mapX * mapY && world.map[mp] == 1) { // hit wall
+                hx = rx;
+                hy = ry;
+                disH = dist(px, py, hx, hy, ra);
                 dof = 8; 
             } else {
                 rx += x0;
@@ -199,11 +215,13 @@ void DrawRays3D(void) {
             }
         }
 
-        DrawLineEx((Vector2){px, py}, (Vector2){rx, ry}, 10, GREEN);
-
-        // check vertical lines
+        float disV = 1000000;
+        float vx = px;
+        float vy = py;
         dof = 0;
         float nTan = -tan(ra);
+
+        // check vertical lines
         if (ra > PI/2 && ra < 3*PI/2) { // left
             rx = (((int) px >> 6) << 6) - 0.0001f; 
             ry = (px - rx) * nTan + py;
@@ -225,7 +243,10 @@ void DrawRays3D(void) {
             mx = (int) (rx) >> 6;
             my = (int) (ry) >> 6;
             mp = my * mapX + mx;
-            if (mp < mapX * mapY && world.map[mp] == 1) { // hit wall
+            if (mp > 0 && mp < mapX * mapY && world.map[mp] == 1) { // hit wall
+                vx = rx;
+                vy = ry;
+                disV = dist(px, py, vx, vy, ra);
                 dof = 8; 
             } else {
                 rx += x0;
@@ -234,7 +255,24 @@ void DrawRays3D(void) {
             }
         }
 
+        if (disV < disH) {
+            rx = vx;
+            ry = vy;
+        }
+        if (disH < disV) {
+            rx = hx;
+            ry = hy;
+        }
+
         DrawLineEx((Vector2){px, py}, (Vector2){rx, ry}, 3, RED);
+
+        ra += DR;
+        if (ra < 0) {
+            ra += 2 * PI;
+        }
+        if (ra > 2 * PI) {
+            ra -= 2 * PI;
+        }
     }
 }
 
@@ -243,7 +281,7 @@ void DrawGame(void) {
     DrawFPS(10, 10);
 
     Draw2DMap();
-    DrawRays3D();
+    DrawRays2D();
     DrawPlayer();
 }
 
