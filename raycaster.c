@@ -161,7 +161,7 @@ float dist(float ax, float ay, float bx, float by, float ang) {
 
 void DrawRays2D(void) {
     int r, mx, my, mp, dof;
-    float rx, ry, ra, x0, y0;
+    float rx, ry, ra, x0, y0, disT;
     ra = player.angle - DR * 30;
     if (ra < 0) {
         ra += 2 * PI;
@@ -255,16 +255,36 @@ void DrawRays2D(void) {
             }
         }
 
+        Color rayColor;
         if (disV < disH) {
             rx = vx;
             ry = vy;
+            disT = disV;
+            rayColor = (Color){230, 0, 0, 255};
         }
         if (disH < disV) {
             rx = hx;
             ry = hy;
+            disT = disH;
+            rayColor = (Color){179, 0, 0, 255};
         }
-
         DrawLineEx((Vector2){px, py}, (Vector2){rx, ry}, 3, RED);
+
+        // draw 3d walls
+        float ca = player.angle - ra;
+        if (ca < 0) {
+            ca += 2 * PI;
+        }
+        if (ca > 2 * PI) {
+            ca -= 2 * PI;
+        }
+        disT = disT * cos(ca); // fix fisheye
+        float lineH = (world.size * 320) / disT;
+        float lineO = 160 - lineH / 2;
+        if (lineH > 320) { // line height
+            lineH = 320;
+        }
+        DrawLineEx((Vector2){r * 8 + 530, lineO}, (Vector2){r * 8 + 530, lineH + lineO}, 8, rayColor);
 
         ra += DR;
         if (ra < 0) {
