@@ -5,6 +5,9 @@
 #define SCREEN_WIDTH 1024
 #define SCREEN_HEIGHT 512
 
+#define P2 PI/2
+#define P3 PI/3
+
 typedef struct Player {
     Vector2 position;
     Vector2 delta;
@@ -162,6 +165,8 @@ void DrawRays3D(void) {
     int mapY = world.units.y;
 
     for (r = 0; r < 1; r++) {
+
+        // check horizontal lines
         dof = 0;
         float aTan = -1/tan(ra);
         if (ra > PI) { // looking up
@@ -176,7 +181,7 @@ void DrawRays3D(void) {
             y0 = 64.0f;
             x0 = -y0 * aTan;
         }
-        if (ra == 0 || ra == PI) { // straight or left
+        if (ra == 0 || ra == 2 * PI) { // left or right
             rx = px; 
             ry = py; 
             dof = 8;
@@ -185,7 +190,6 @@ void DrawRays3D(void) {
             mx = (int) (rx) >> 6;
             my = (int) (ry) >> 6;
             mp = my * mapX + mx;
-            mp = Clamp(mp, 0, 63);
             if (mp < mapX * mapY && world.map[mp] == 1) { // hit wall
                 dof = 8; 
             } else {
@@ -195,7 +199,42 @@ void DrawRays3D(void) {
             }
         }
 
-        DrawLineEx((Vector2){px, py}, (Vector2){rx, ry}, 1, GREEN);
+        DrawLineEx((Vector2){px, py}, (Vector2){rx, ry}, 10, GREEN);
+
+        // check vertical lines
+        dof = 0;
+        float nTan = -tan(ra);
+        if (ra > PI/2 && ra < 3*PI/2) { // left
+            rx = (((int) px >> 6) << 6) - 0.0001f; 
+            ry = (px - rx) * nTan + py;
+            x0 = -64.0f;
+            y0 = -x0 * nTan;
+        }
+        if (ra < PI/2 || ra > 3*PI/2) { // right
+            rx = (((int) px >> 6) << 6) + 64.0f; 
+            ry = (px - rx) * nTan + py;
+            x0 = 64.0f;
+            y0 = -x0 * nTan;
+        }
+        if (ra == PI/2 || ra == 3*PI/2) { // up or down
+            rx = px; 
+            ry = py; 
+            dof = 8;
+        }
+        while (dof < 8) {
+            mx = (int) (rx) >> 6;
+            my = (int) (ry) >> 6;
+            mp = my * mapX + mx;
+            if (mp < mapX * mapY && world.map[mp] == 1) { // hit wall
+                dof = 8; 
+            } else {
+                rx += x0;
+                ry += y0;
+                dof += 1;
+            }
+        }
+
+        DrawLineEx((Vector2){px, py}, (Vector2){rx, ry}, 3, RED);
     }
 }
 
