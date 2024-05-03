@@ -5,37 +5,218 @@
 #define SCREEN_WIDTH 1024
 #define SCREEN_HEIGHT 512
 
-#define DR 0.0174533 // 1 degree in radians
 
-typedef struct Player {
-    Vector2 position;
-    Vector2 delta;
-    float angle;
-    int size;
+//-----------------------------MAP----------------------------------------------
+#define MAP_X 8
+#define MAP_Y 8
+#define MAP_SIZE 64
+
+int map[] =
+{
+ 1,1,1,1,1,1,1,1,
+ 1,0,1,0,0,0,0,1,
+ 1,0,1,0,0,0,0,1,
+ 1,0,1,0,0,0,0,1,
+ 1,0,0,0,0,0,0,1,
+ 1,0,0,0,0,1,0,1,
+ 1,0,0,0,0,0,0,1,
+ 1,1,1,1,1,1,1,1,	
+};
+
+void Draw2DMap() {
     Color color;
-} Player;
+    for (int y = 0; y < MAP_Y; y++) {
+        for (int x = 0; x < MAP_X; x++) {
+            color = (map[y * MAP_X + x] == 1) ? WHITE : BLACK;
+            int x0 = x * MAP_SIZE;
+            int y0 = y * MAP_SIZE;
+            DrawRectangle(x0+1, y0+1, MAP_SIZE-2, MAP_SIZE-2, color);
+        }
+    }
+}
 
-typedef struct World {
-    Vector2 units;
-    int size;
-    int* map;
-} World;
+//------------------------PLAYER------------------------------------------------
+float degToRad(int a) { 
+    return a * PI / 180.0f;
+}
 
-Player player;
-World world;
+int FixAng(int a){ 
+    if(a>359){ 
+        a -= 360;
+    } 
+    if(a<0){ 
+        a += 360;
+    } 
+    return a;
+}
 
-void InitGame(void);
-void UpdateControls(void);
-void UpdateGame(void);
-void DrawPlayer(void);
-void Draw2DMap(void);
-float dist(float, float, float, float, float);
-void DrawRays2D(void);
-void DrawGame(void);
-void DeInitGame(void);
+float px,py,pdx,pdy,pa;
+
+void DrawPlayer() {
+    DrawCircle(px, py, 4, YELLOW);
+    DrawLine(px, py, px + pdx * 20, py + pdy * 20, YELLOW);
+}
+
+void controls() {
+    if (IsKeyDown(KEY_A)) {
+        pa += 5;
+        pa = FixAng(pa);
+        pdx = cos(degToRad(pa));
+        pdy = -sin(degToRad(pa));
+    } 
+    if (IsKeyDown(KEY_D)) {
+        pa -= 5;
+        pa = FixAng(pa);
+        pdx = cos(degToRad(pa));
+        pdy = -sin(degToRad(pa));
+    }
+    if (IsKeyDown(KEY_W)) {
+        px += pdx * 5;
+        py += pdy * 5;
+    }
+    if (IsKeyDown(KEY_S)) {
+        px -= pdx * 5;
+        py -= pdy * 5;
+    }
+}
+
+//---------------------------Draw Rays and Walls--------------------------------
+float dist(float ax, float ay, float bx, float by, float ang) {
+    return cos(degToRad(ang)) * (bx - ax) - sin(degToRad(ang)) * (by - ay);
+}
+
+void DrawRays2D() {
+    DrawRectangle(SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, SKYBLUE);
+    DrawRectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, DARKBLUE);
+
+    int r, mx, my, mp, dof, side;
+    float vx, vy, rx, ry, ra, xo, yo, disV, disH, Tan;
+    ra = FixAng(pa + 30.0f);
+
+    for (r = 0; r < 60; r++) {
+        //---Vertical---
+        dof = 0; 
+        side = 0; 
+        disV = 100000.0f;
+        Tan = tan(degToRad(ra));
+
+        if (cos(degToRad(ra)) > 0.001f) { // Looking left
+            rx = (((int)px >> 6) << 6) + 64.0f;
+            ry = (px - rx) * Tan + py;
+            xo = 64.0f;
+            yo = -xo * Tan;
+        } else if (cos(degToRad(ra)) < -0.001f) { // Looking right
+            rx = (((int)px >> 6) << 6) - 0.0001f;
+            ry = (px - rx) * Tan + py;
+            xo = -64.0f;
+            yo = -xo * Tan;
+        } else {
+            rx = px;
+            ry = py;
+            dof = 8; // Looking up or down, no horizontal check
+        }
+
+        while (dof < 8) {
+            mx = (int)(rx) >> 6;
+            my = (int)(ry) >> 6;
+            mp = my * MAP_X + mx;
+            if (mp > 0 && mp < MAP_X * MAP_Y && map[mp] == 1) {
+                dof = 8; // Hit
+                disV = dist(px, py, rx, ry, ra);
+            } else {
+                rx += xo;
+                ry += yo;
+                dof += 1; // Check next vertical
+            }
+        }
+        vx = rx; 
+        vy = ry;
+
+        //---Horizontal---
+        dof = 0; 
+        disH = 100000.0f;
+        Tan = 1.0 / Tan;
+
+        if (sin(degToRad(ra)) > 0.001f) { // Looking up
+            ry = (((int)py >> 6) << 6) - 0.0001f;
+            rx = (py - ry) * Tan + px;
+            yo = -64.0f;
+            xo = -yo * Tan;
+        } else if (sin(degToRad(ra)) < -0.001f) { // Looking down
+            ry = (((int)py >> 6) << 6) + 64.0f;
+            rx = (py - ry) * Tan + px;
+            yo = 64.0f;
+            xo = -yo * Tan;
+        } else {
+            rx = px;
+            ry = py;
+            dof = 8; // Looking straight left or right
+        }
+
+        while (dof < 8) {
+            mx = (int)(rx) >> 6;
+            my = (int)(ry) >> 6;
+            mp = my * MAP_X + mx;
+            if (mp > 0 && mp < MAP_X * MAP_Y && map[mp] == 1) {
+                dof = 8; // Hit
+                disH = dist(px, py, rx, ry, ra);
+            } else {
+                rx += xo;
+                ry += yo;
+                dof += 1; // Check next horizontal
+            }
+        }
+
+        Color rayColor = LIME;
+        if (disV < disH) {
+            rx = vx;
+            ry = vy;
+            disH = disV;
+            rayColor = GREEN;
+        }
+        DrawLine(px, py, rx, ry, rayColor); // 2D ray
+
+        int ca = FixAng(pa - ra);
+        disH = disH * cos(degToRad(ca)); // Fix fisheye
+        int lineH = (MAP_SIZE * SCREEN_HEIGHT) / (disH);
+        if (lineH > SCREEN_HEIGHT) lineH = SCREEN_HEIGHT;
+        int lineOff = SCREEN_HEIGHT / 2 - (lineH >> 1);
+
+        DrawRectangle(r * 9 + SCREEN_WIDTH / 2, lineOff, 9, lineH, rayColor);
+
+        ra = FixAng(ra - 1);
+    }
+}
+
+//------------------------GAME--------------------------------------------------
+
+void InitGame() {
+    px=150; 
+    py=400; 
+    pa=90;
+    pdx=cos(degToRad(pa)); pdy=-sin(degToRad(pa)); 
+}
+
+void UpdateGame(void) {
+    controls();
+}
+
+void DrawGame(void) {
+    ClearBackground(DARKGRAY);
+
+    Draw2DMap();
+    DrawPlayer();
+    DrawRays2D();
+
+    DrawFPS(10, 10);
+}
+
+void DeInitGame(void) {
+    // TODO
+}
 
 int main(void) {
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Mode7 Demo");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Raycaster Demo");
     SetTargetFPS(60);
 
     InitGame();
@@ -52,259 +233,4 @@ int main(void) {
     CloseWindow();
 
     return 0;
-}
-
-void InitGame(void) {
-    player.position.x = 300.0f;
-    player.position.y = 300.0f;
-    player.angle = 1.0f;
-    player.delta.x = cos(player.angle) * 5.0f;
-    player.delta.y = sin(player.angle) * 5.0f;
-    player.size = 8;
-    player.color = YELLOW;
-    world.units.x = 8.0f;
-    world.units.y = 8.0f;
-    world.size = 64;
-    world.map = (int*) malloc(world.units.x * world.units.y * sizeof(int));
-
-    // replace with generated map later
-    int temp_map[8][8] = {
-        {1, 1, 1, 1, 1, 1, 1, 1},
-        {1, 0, 1, 0, 0, 0, 0, 1},
-        {1, 0, 1, 0, 0, 0, 0, 1},
-        {1, 0, 1, 0, 0, 0, 0, 1},
-        {1, 0, 0, 0, 0, 0, 0, 1},
-        {1, 0, 0, 0, 0, 1, 0, 1},
-        {1, 0, 0, 0, 0, 0, 0, 1},
-        {1, 1, 1, 1, 1, 1, 1, 1}
-    };
-
-    for (int y = 0; y < 8; y++) {
-        for (int x = 0; x < 8; x++) {
-            world.map[y * 8 + x] = temp_map[y][x];
-        }
-    }
-}
-
-void UpdateControls(void) {
-    float* px = &player.position.x;
-    float* py = &player.position.y;
-    float* pdx = &player.delta.x;
-    float* pdy = &player.delta.y;
-    float* pa = &player.angle;
-
-    if (IsKeyDown(KEY_A)) {
-        *pa-=0.1;
-        if (*pa < 0) {
-            *pa += 2*PI;
-        }
-        *pdx = cos(*pa) * 5;
-        *pdy = sin(*pa) * 5;
-    } 
-    if (IsKeyDown(KEY_D)) {
-        *pa+=0.1;
-        if (*pa > 2 * PI) {
-            *pa -= 2*PI;
-        }
-        *pdx = cos(*pa) * 5;
-        *pdy = sin(*pa) * 5;
-    }
-    if (IsKeyDown(KEY_W)) {
-        *px += *pdx;
-        *py += *pdy;
-    }
-    if (IsKeyDown(KEY_S)) {
-        *px -= *pdx;
-        *py -= *pdy;
-    }
-}
-
-void UpdateGame(void) {
-    UpdateControls();
-}
-
-void DrawPlayer(void) {
-    int startX = player.position.x;
-    int startY = player.position.y;
-    int endX = startX + player.delta.x * 5;
-    int endY = startY + player.delta.y * 5;
-    
-    Vector2 start = { (float)startX, (float)startY };
-    Vector2 end = { (float)endX, (float)endY };
-    float thickness = 3.0f;
-    Color color = YELLOW;
-
-    DrawLineEx(start, end, thickness, color); 
-
-    DrawRectangle(startX - player.size / 2, startY - player.size / 2, player.size, player.size, player.color);
-}
-
-void Draw2DMap(void) {
-    Color color;
-    for (int y = 0; y < world.units.y; y++) {
-        for (int x = 0; x < world.units.x; x++) {
-            if (world.map[(int)(y * world.units.x + x)] == 1) {
-                color = RAYWHITE;
-            } else {
-                color = BLACK;
-            }
-            int x0 = x * world.size;
-            int y0 = y * world.size;
-            DrawRectangle(x0+1, y0+1, world.size-1, world.size-1, color);
-        }
-    }
-}
-
-float dist(float ax, float ay, float bx, float by, float ang) {
-    return (sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay)));
-}
-
-void DrawRays2D(void) {
-    int r, mx, my, mp, dof;
-    float rx, ry, ra, x0, y0, disT;
-    ra = player.angle - DR * 30;
-    if (ra < 0) {
-        ra += 2 * PI;
-    }
-    if (ra > 2 * PI) {
-        ra -= 2 * PI;
-    }
-    float px = player.position.x;
-    float py = player.position.y;
-    int mapX = world.units.x;
-    int mapY = world.units.y;
-
-    for (r = 0; r < 60; r++) {
-        dof = 0;
-        float disH = 1000000;
-        float hx = px;
-        float hy = py;
-        float aTan = -1/tan(ra);
-
-        // check horizontal lines
-        if (ra > PI) { // looking up
-            ry = (((int) py >> 6) << 6) - 0.0001f; 
-            rx = (py - ry) * aTan + px;
-            y0 = -64.0f;
-            x0 = -y0 * aTan;
-        }
-        if (ra < PI) { // looking down
-            ry = (((int) py >> 6) << 6) + 64.0f; 
-            rx = (py - ry) * aTan + px;
-            y0 = 64.0f;
-            x0 = -y0 * aTan;
-        }
-        if (ra == 0 || ra == 2 * PI) { // left or right
-            rx = px; 
-            ry = py; 
-            dof = 8;
-        }
-        while (dof < 8) {
-            mx = (int) (rx) >> 6;
-            my = (int) (ry) >> 6;
-            mp = my * mapX + mx;
-            if (mp > 0 && mp < mapX * mapY && world.map[mp] == 1) { // hit wall
-                hx = rx;
-                hy = ry;
-                disH = dist(px, py, hx, hy, ra);
-                dof = 8; 
-            } else {
-                rx += x0;
-                ry += y0;
-                dof += 1;
-            }
-        }
-
-        float disV = 1000000;
-        float vx = px;
-        float vy = py;
-        dof = 0;
-        float nTan = -tan(ra);
-
-        // check vertical lines
-        if (ra > PI/2 && ra < 3*PI/2) { // left
-            rx = (((int) px >> 6) << 6) - 0.0001f; 
-            ry = (px - rx) * nTan + py;
-            x0 = -64.0f;
-            y0 = -x0 * nTan;
-        }
-        if (ra < PI/2 || ra > 3*PI/2) { // right
-            rx = (((int) px >> 6) << 6) + 64.0f; 
-            ry = (px - rx) * nTan + py;
-            x0 = 64.0f;
-            y0 = -x0 * nTan;
-        }
-        if (ra == PI/2 || ra == 3*PI/2) { // up or down
-            rx = px; 
-            ry = py; 
-            dof = 8;
-        }
-        while (dof < 8) {
-            mx = (int) (rx) >> 6;
-            my = (int) (ry) >> 6;
-            mp = my * mapX + mx;
-            if (mp > 0 && mp < mapX * mapY && world.map[mp] == 1) { // hit wall
-                vx = rx;
-                vy = ry;
-                disV = dist(px, py, vx, vy, ra);
-                dof = 8; 
-            } else {
-                rx += x0;
-                ry += y0;
-                dof += 1;
-            }
-        }
-
-        Color rayColor;
-        if (disV < disH) {
-            rx = vx;
-            ry = vy;
-            disT = disV;
-            rayColor = (Color){230, 0, 0, 255};
-        }
-        if (disH < disV) {
-            rx = hx;
-            ry = hy;
-            disT = disH;
-            rayColor = (Color){179, 0, 0, 255};
-        }
-        DrawLineEx((Vector2){px, py}, (Vector2){rx, ry}, 3, RED);
-
-        // draw 3d walls
-        float ca = player.angle - ra;
-        if (ca < 0) {
-            ca += 2 * PI;
-        }
-        if (ca > 2 * PI) {
-            ca -= 2 * PI;
-        }
-        disT = disT * cos(ca); // fix fisheye
-        float lineH = (world.size * 320) / disT;
-        float lineO = 160 - lineH / 2;
-        if (lineH > 320) { // line height
-            lineH = 320;
-        }
-        DrawLineEx((Vector2){r * 8 + 530, lineO}, (Vector2){r * 8 + 530, lineH + lineO}, 8, rayColor);
-
-        ra += DR;
-        if (ra < 0) {
-            ra += 2 * PI;
-        }
-        if (ra > 2 * PI) {
-            ra -= 2 * PI;
-        }
-    }
-}
-
-void DrawGame(void) {
-    ClearBackground(DARKGRAY);
-    DrawFPS(10, 10);
-
-    Draw2DMap();
-    DrawRays2D();
-    DrawPlayer();
-}
-
-void DeInitGame(void) {
-    free(world.map);
 }
