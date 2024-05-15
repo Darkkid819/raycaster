@@ -5,7 +5,6 @@
 #define SCREEN_WIDTH 1024
 #define SCREEN_HEIGHT 512
 
-
 //-----------------------------MAP----------------------------------------------
 #define MAP_X 8
 #define MAP_Y 8
@@ -86,8 +85,8 @@ float dist(float ax, float ay, float bx, float by, float ang) {
 }
 
 void DrawRays2D() {
-    DrawRectangle(SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, SKYBLUE);
-    DrawRectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, DARKBLUE);
+    DrawRectangle(GetScreenWidth() / 2, 0, GetScreenWidth() / 2, GetScreenHeight() / 2, SKYBLUE);
+    DrawRectangle(GetScreenWidth() / 2, GetScreenHeight() / 2, GetScreenWidth() / 2, GetScreenHeight() / 2, DARKBLUE);
 
     int r, mx, my, mp, dof, side;
     float vx, vy, rx, ry, ra, xo, yo, disV, disH, Tan;
@@ -178,11 +177,11 @@ void DrawRays2D() {
 
         int ca = FixAng(pa - ra);
         disH = disH * cos(degToRad(ca)); // Fix fisheye
-        int lineH = (MAP_SIZE * SCREEN_HEIGHT) / (disH);
-        if (lineH > SCREEN_HEIGHT) lineH = SCREEN_HEIGHT;
-        int lineOff = SCREEN_HEIGHT / 2 - (lineH >> 1);
+        int lineH = (MAP_SIZE * GetScreenHeight()) / disH;
+        if (lineH > GetScreenHeight()) lineH = GetScreenHeight();
+        int lineOff = (GetScreenWidth() / 4) - (lineH >> 1);
 
-        DrawRectangle(r * 9 + SCREEN_WIDTH / 2, lineOff, 9, lineH, rayColor);
+        DrawRectangle(r * 9 + GetScreenWidth() / 2, lineOff, 9, lineH, rayColor);
 
         ra = FixAng(ra - 1);
     }
