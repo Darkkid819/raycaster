@@ -158,23 +158,22 @@ int textures[]=
 #define MAP_Y 8
 #define MAP_SIZE 64
 
-int map[] =
+int mapW[] =
 {
- 1,1,1,1,1,1,1,1,
- 1,0,1,0,0,0,0,1,
- 1,0,1,0,0,0,0,1,
- 1,0,1,0,0,0,0,1,
- 1,0,0,0,0,0,0,1,
- 1,0,0,0,0,1,0,1,
- 1,0,0,0,0,0,0,1,
- 1,1,1,1,1,1,1,1,	
+ 1,1,1,1,1,3,1,1,
+ 1,0,0,1,0,0,0,1,
+ 1,0,0,4,0,2,0,1,
+ 1,1,4,1,0,0,0,1,
+ 2,0,0,0,0,0,0,1,
+ 2,0,0,0,0,1,0,1,
+ 2,0,0,0,0,0,0,1,
+ 1,1,3,1,3,1,3,1,	
 };
-
 void Draw2DMap() {
     Color color;
     for (int y = 0; y < MAP_Y; y++) {
         for (int x = 0; x < MAP_X; x++) {
-            color = (map[y * MAP_X + x] == 1) ? WHITE : BLACK;
+            color = (mapW[y * MAP_X + x] > 0) ? WHITE : BLACK;
             int x0 = x * MAP_SIZE;
             int y0 = y * MAP_SIZE;
             DrawRectangle(x0+1, y0+1, MAP_SIZE-2, MAP_SIZE-2, color);
@@ -240,18 +239,18 @@ void controls() {
     int ipy_sub_yo = (py - yo) / MAP_SIZE;
 
     if (IsKeyDown(KEY_W)) {
-        if (map[ipy * MAP_X + ipx_add_xo] == 0) {
+        if (mapW[ipy * MAP_X + ipx_add_xo] == 0) {
             px += pdx * moveStep;
         }
-        if (map[ipy_add_yo * MAP_X + ipx] == 0) {
+        if (mapW[ipy_add_yo * MAP_X + ipx] == 0) {
             py += pdy * moveStep;
         }
     }
     if (IsKeyDown(KEY_S)) {
-        if (map[ipy * MAP_X + ipx_sub_xo] == 0) {
+        if (mapW[ipy * MAP_X + ipx_sub_xo] == 0) {
             px -= pdx * moveStep;
         }
-        if (map[ipy_sub_yo * MAP_X + ipx] == 0) {
+        if (mapW[ipy_sub_yo * MAP_X + ipx] == 0) {
             py -= pdy * moveStep;
         }
     }
@@ -272,6 +271,7 @@ void DrawRays2D() {
     ra = FixAng(pa + 30.0f);
 
     for (r = 0; r < 60; r++) {
+        int vmt = 0, hmt = 0; // vertical and horizontal map texture number
         //---Vertical---
         dof = 0; 
         // side = 0; 
@@ -298,7 +298,8 @@ void DrawRays2D() {
             mx = (int)(rx) >> 6;
             my = (int)(ry) >> 6;
             mp = my * MAP_X + mx;
-            if (mp > 0 && mp < MAP_X * MAP_Y && map[mp] == 1) {
+            if (mp > 0 && mp < MAP_X * MAP_Y && mapW[mp] > 0) {
+                vmt = mapW[mp] - 1;
                 dof = 8; // Hit
                 disV = dist(px, py, rx, ry, ra);
             } else {
@@ -335,7 +336,8 @@ void DrawRays2D() {
             mx = (int)(rx) >> 6;
             my = (int)(ry) >> 6;
             mp = my * MAP_X + mx;
-            if (mp > 0 && mp < MAP_X * MAP_Y && map[mp] == 1) {
+            if (mp > 0 && mp < MAP_X * MAP_Y && mapW[mp] > 0) {
+                hmt = mapW[mp] - 1;
                 dof = 8; // Hit
                 disH = dist(px, py, rx, ry, ra);
             } else {
@@ -348,6 +350,7 @@ void DrawRays2D() {
         float shade = 1;
         Color rayColor = LIME;
         if (disV < disH) {
+            hmt = vmt;
             shade = 0.5;
             rx = vx;
             ry = vy;
@@ -367,7 +370,7 @@ void DrawRays2D() {
         }
         int lineOff = (GetScreenWidth() / 4) - (lineH >> 1);
 
-        float ty = ty_off * ty_step;
+        float ty = ty_off * ty_step + hmt * 32;
         float tx;
         if (shade == 1) {
             tx = (int) (rx / 2.0f) % 32;
@@ -380,6 +383,7 @@ void DrawRays2D() {
                 tx = 31 - tx;
             }
         }
+
         for (int y = 0; y < lineH; y++) {
             float c = textures[(int) (ty) * 32 + (int) tx] * shade;
             rayColor = (Color){c * 255, c * 255, c * 255, 255};
