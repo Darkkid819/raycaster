@@ -219,18 +219,8 @@ void controls() {
         pdy = -sin(degToRad(pa));
     }
 
-    int xo = 0;
-    if (pdx < 0) {
-        xo = -20;
-    } else {
-        xo = 20;
-    }
-    int yo = 0;
-    if (pdy < 0) {
-        yo = -20;
-    } else {
-        yo = 20;
-    }
+    int xo = pdx < 0 ? -20 : 20;
+    int yo = pdy < 0 ? -20 : 20;
     int ipx = px / MAP_SIZE;
     int ipx_add_xo = (px + xo) / MAP_SIZE;
     int ipx_sub_xo = (px - xo) / MAP_SIZE;
@@ -254,6 +244,15 @@ void controls() {
             py -= pdy * moveStep;
         }
     }
+
+    if (IsKeyDown(KEY_E)) {
+        xo = pdx < 0 ? -25 : 25;
+        yo = pdy < 0 ? -25 : 25;
+        if (mapW[ipy_add_yo * MAP_X + ipx_add_xo] == 4) {
+            mapW[ipy_add_yo * MAP_X + ipx_add_xo] = 0;
+        }
+    }
+
 }
 
 
@@ -387,6 +386,12 @@ void DrawRays2D() {
         for (int y = 0; y < lineH; y++) {
             float c = textures[(int) (ty) * 32 + (int) tx] * shade;
             rayColor = (Color){c * 255, c * 255, c * 255, 255};
+            switch (hmt) {
+                case 0: rayColor = (Color){c * 255, c / 2.0f * 255, c / 2.0f * 255, 255}; break; // checkerboard red
+                case 1: rayColor = (Color){c * 255, c * 255, c / 2.0f * 255, 255}; break; // brick yellow
+                case 2: rayColor = (Color){c / 2.0f * 255, c / 2.0f * 255, c * 255, 255}; break; // window blue
+                case 3: rayColor = (Color){c / 2.0f * 255, c * 255, c / 2.0f * 255, 255}; break; // door green
+            }
             for (int x = 0; x < 9; x++) {
                 DrawPixel(r * 9 + GetScreenWidth() / 2 + x, y + lineOff, rayColor);
             }
