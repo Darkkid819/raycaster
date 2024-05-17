@@ -35,16 +35,16 @@ void Draw2DMap() {
 }
 
 //------------------------PLAYER------------------------------------------------
-float degToRad(int a) { 
+float degToRad(float a) { 
     return a * PI / 180.0f;
 }
 
-int FixAng(int a){ 
-    if(a>359){ 
-        a -= 360;
+int FixAng(float a){ 
+    if(a > 359.0f){ 
+        a -= 360.0f;
     } 
     if(a<0){ 
-        a += 360;
+        a += 360.0f;
     } 
     return a;
 }
@@ -58,24 +58,24 @@ void DrawPlayer() {
 
 void controls() {
     if (IsKeyDown(KEY_A)) {
-        pa += 5;
+        pa += 0.05 * GetFPS();
         pa = FixAng(pa);
         pdx = cos(degToRad(pa));
         pdy = -sin(degToRad(pa));
     } 
     if (IsKeyDown(KEY_D)) {
-        pa -= 5;
+        pa -= 0.05 * GetFPS();
         pa = FixAng(pa);
         pdx = cos(degToRad(pa));
         pdy = -sin(degToRad(pa));
     }
     if (IsKeyDown(KEY_W)) {
-        px += pdx * 5;
-        py += pdy * 5;
+        px += pdx * 0.08 * GetFPS();
+        py += pdy * 0.08 * GetFPS();
     }
     if (IsKeyDown(KEY_S)) {
-        px -= pdx * 5;
-        py -= pdy * 5;
+        px -= pdx * 0.08 * GetFPS();
+        py -= pdy * 0.08 * GetFPS();
     }
 }
 
@@ -88,14 +88,14 @@ void DrawRays2D() {
     DrawRectangle(GetScreenWidth() / 2, 0, GetScreenWidth() / 2, GetScreenHeight() / 2, SKYBLUE);
     DrawRectangle(GetScreenWidth() / 2, GetScreenHeight() / 2, GetScreenWidth() / 2, GetScreenHeight() / 2, DARKBLUE);
 
-    int r, mx, my, mp, dof, side;
+    int r, mx, my, mp, dof;
     float vx, vy, rx, ry, ra, xo, yo, disV, disH, Tan;
     ra = FixAng(pa + 30.0f);
 
     for (r = 0; r < 60; r++) {
         //---Vertical---
         dof = 0; 
-        side = 0; 
+        // side = 0; 
         disV = 100000.0f;
         Tan = tan(degToRad(ra));
 
