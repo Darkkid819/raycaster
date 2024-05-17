@@ -57,27 +57,58 @@ void DrawPlayer() {
 }
 
 void controls() {
+    float moveStep = 250.0f * GetFrameTime();
+
     if (IsKeyDown(KEY_A)) {
-        pa += 0.05 * GetFPS();
-        pa = FixAng(pa);
-        pdx = cos(degToRad(pa));
-        pdy = -sin(degToRad(pa));
-    } 
-    if (IsKeyDown(KEY_D)) {
-        pa -= 0.05 * GetFPS();
+        pa += moveStep;
         pa = FixAng(pa);
         pdx = cos(degToRad(pa));
         pdy = -sin(degToRad(pa));
     }
+    if (IsKeyDown(KEY_D)) {
+        pa -= moveStep;
+        pa = FixAng(pa);
+        pdx = cos(degToRad(pa));
+        pdy = -sin(degToRad(pa));
+    }
+
+    int xo = 0;
+    if (pdx < 0) {
+        xo = -20;
+    } else {
+        xo = 20;
+    }
+    int yo = 0;
+    if (pdy < 0) {
+        yo = -20;
+    } else {
+        yo = 20;
+    }
+    int ipx = px / MAP_SIZE;
+    int ipx_add_xo = (px + xo) / MAP_SIZE;
+    int ipx_sub_xo = (px - xo) / MAP_SIZE;
+    int ipy = py / MAP_SIZE;
+    int ipy_add_yo = (py + yo) / MAP_SIZE;
+    int ipy_sub_yo = (py - yo) / MAP_SIZE;
+
     if (IsKeyDown(KEY_W)) {
-        px += pdx * 0.08 * GetFPS();
-        py += pdy * 0.08 * GetFPS();
+        if (map[ipy * MAP_X + ipx_add_xo] == 0) {
+            px += pdx * moveStep;
+        }
+        if (map[ipy_add_yo * MAP_X + ipx] == 0) {
+            py += pdy * moveStep;
+        }
     }
     if (IsKeyDown(KEY_S)) {
-        px -= pdx * 0.08 * GetFPS();
-        py -= pdy * 0.08 * GetFPS();
+        if (map[ipy * MAP_X + ipx_sub_xo] == 0) {
+            px -= pdx * moveStep;
+        }
+        if (map[ipy_sub_yo * MAP_X + ipx] == 0) {
+            py -= pdy * moveStep;
+        }
     }
 }
+
 
 //---------------------------Draw Rays and Walls--------------------------------
 float dist(float ax, float ay, float bx, float by, float ang) {
